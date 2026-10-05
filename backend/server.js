@@ -9,13 +9,17 @@ const databaseRoutes = require("./routes/database");
 const importRoutes = require("./routes/import");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // =========================
 // MIDDLEWARE
 // =========================
 
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+  : true;
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 // =========================
