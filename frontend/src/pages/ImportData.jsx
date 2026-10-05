@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  window.location.origin ||
+  "http://localhost:5000";
 
 function ImportData() {
   const [file, setFile] = useState(null);

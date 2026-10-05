@@ -1621,8 +1621,13 @@ function Dashboard() {
           /*
            * Fetch backend
            */
+          const API_BASE =
+            import.meta.env.VITE_API_URL ||
+            window.location.origin ||
+            "http://localhost:5000";
+
           const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/dashboard`
+            `${API_BASE}/api/dashboard`
           );
 
           const payload =

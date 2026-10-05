@@ -1,30 +1,54 @@
 const { google } = require("googleapis");
 
-const auth = new google.auth.GoogleAuth({
-  credentials: {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
-  },
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-});
-
-const sheets = google.sheets({
-  version: "v4",
-  auth,
-});
-
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME || "DATABASE";
 
-async function appendRows(rows) {
-  if (!SPREADSHEET_ID) {
-    throw new Error("GOOGLE_SHEET_ID belum diatur di .env");
+const hasGoogleConfig = () =>
+  Boolean(
+    process.env.GOOGLE_SHEET_ID &&
+      process.env.GOOGLE_CLIENT_EMAIL &&
+      process.env.GOOGLE_PRIVATE_KEY
+  );
+
+const ensureGoogleConfig = () => {
+  if (!hasGoogleConfig()) {
+    throw new Error(
+      "Konfigurasi Google Sheets belum lengkap. Isi GOOGLE_SHEET_ID, GOOGLE_CLIENT_EMAIL, dan GOOGLE_PRIVATE_KEY di file .env."
+    );
   }
+};
+
+const getGoogleAuth = () => {
+  ensureGoogleConfig();
+
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n");
+
+  return new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      private_key: privateKey,
+    },
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+};
+
+const getSheetsClient = () => {
+  const auth = getGoogleAuth();
+
+  return google.sheets({
+    version: "v4",
+    auth,
+  });
+};
+
+async function appendRows(rows) {
+  ensureGoogleConfig();
 
   if (!rows || rows.length === 0) {
     return { updatedRows: 0 };
   }
 
+  const sheets = getSheetsClient();
   const values = rows.map((row) => [
     row.Periode ?? "",
     row["Item Id"] ?? "",
@@ -56,10 +80,9 @@ async function appendRows(rows) {
 }
 
 async function getRows() {
-  if (!SPREADSHEET_ID) {
-    throw new Error("GOOGLE_SHEET_ID belum diatur di .env");
-  }
+  ensureGoogleConfig();
 
+  const sheets = getSheetsClient();
   const result = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${SHEET_NAME}!A:L`,

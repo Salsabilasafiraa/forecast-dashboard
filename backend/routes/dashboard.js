@@ -163,10 +163,6 @@ const getPeriodeSortValue = (row) => {
 
 router.get("/", async (req, res) => {
   try {
-    // =================================================
-    // AMBIL DATA GOOGLE SHEETS
-    // =================================================
-
     const rows = await getRows();
 
     // Jika belum ada data
@@ -201,7 +197,6 @@ router.get("/", async (req, res) => {
         sourceData: [],
       });
     }
-
 
     // =================================================
     // HEADER
@@ -786,20 +781,47 @@ router.get("/", async (req, res) => {
     });
 
   } catch (error) {
+    const isMissingConfig =
+      String(error.message).includes(
+        "Konfigurasi Google Sheets belum lengkap"
+      );
+
+    if (isMissingConfig) {
+      return res.json({
+        success: true,
+        message:
+          "Google Sheets belum dikonfigurasi. Menampilkan data kosong.",
+        data: {
+          totalData: 0,
+          kpi: {
+            totalForecast: 0,
+            totalPO: 0,
+            totalVariance: 0,
+            accuracy: 0,
+          },
+          status: {},
+          chart: [],
+          filters: {
+            itemIds: [],
+            customers: [],
+            models: [],
+            years: [],
+            months: [],
+          },
+        },
+        sourceData: [],
+      });
+    }
 
     console.error(
       "Dashboard Error:",
       error
     );
 
-
-    res.status(500).json({
-
+    return res.status(500).json({
       success: false,
-
       message:
         "Gagal mengambil data dashboard",
-
       error:
         error.message,
     });

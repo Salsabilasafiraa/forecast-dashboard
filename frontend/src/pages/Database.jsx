@@ -15,7 +15,11 @@ function Database() {
       setLoading(true);
       setError("");
 
-      const API_BASE = import.meta.env.VITE_API_URL;
+      const API_BASE =
+        import.meta.env.VITE_API_URL ||
+        window.location.origin ||
+        "http://localhost:5000";
+
       const response = await axios.get(`${API_BASE}/api/database`);
 
       const data = response?.data?.data || [];

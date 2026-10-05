@@ -64,9 +64,16 @@ app.get("/api/google-sheets/test", async (req, res) => {
   } catch (error) {
     console.error("Google Sheets Error:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Koneksi Google Sheets gagal",
+    const isMissingConfig =
+      String(error.message).includes(
+        "Konfigurasi Google Sheets belum lengkap"
+      );
+
+    res.status(isMissingConfig ? 200 : 500).json({
+      success: isMissingConfig,
+      message: isMissingConfig
+        ? "Google Sheets belum dikonfigurasi. Tambahkan variabel .env terlebih dahulu."
+        : "Koneksi Google Sheets gagal",
       error: error.message,
     });
   }
