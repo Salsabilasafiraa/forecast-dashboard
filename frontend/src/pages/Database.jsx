@@ -15,9 +15,8 @@ function Database() {
       setLoading(true);
       setError("");
 
-      const response = await axios.get(
-        "http://localhost:5000/api/database"
-      );
+      const API_BASE = import.meta.env.VITE_API_URL;
+      const response = await axios.get(`${API_BASE}/api/database`);
 
       const data = response?.data?.data || [];
       setRows(data);

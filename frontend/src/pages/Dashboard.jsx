@@ -1621,10 +1621,9 @@ function Dashboard() {
           /*
            * Fetch backend
            */
-          const response =
-            await axios.get(
-              "http://localhost:5000/api/dashboard"
-            );
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_URL}/api/dashboard`
+          );
 
           const payload =
             response.data || {};
