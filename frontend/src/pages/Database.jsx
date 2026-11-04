@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+
+import { readDataFromGas } from "../lib/gasApi";
 
 const PAGE_SIZE = 20;
 
@@ -15,15 +16,14 @@ function Database() {
       setLoading(true);
       setError("");
 
-      const API_BASE =
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:5000"
-          : window.location.origin);
+      const response = await readDataFromGas();
+      const data =
+        Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.sourceData)
+            ? response.sourceData
+            : [];
 
-      const response = await axios.get(`${API_BASE}/api/database`);
-
-      const data = response?.data?.data || [];
       setRows(data);
       setPage(1);
     } catch (err) {

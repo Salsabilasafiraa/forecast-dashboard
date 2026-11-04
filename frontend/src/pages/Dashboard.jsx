@@ -6,8 +6,11 @@ import {
   useState,
 } from "react";
 
-import axios from "axios";
 import * as XLSX from "xlsx";
+
+import {
+  readDataFromGas,
+} from "../lib/gasApi";
 
 import {
   ForecastChart,
@@ -1619,46 +1622,49 @@ function Dashboard() {
           }
 
           /*
-           * Fetch backend
+           * Fetch data from Google Apps Script
            */
-          const API_BASE =
-            import.meta.env.VITE_API_URL ||
-            (window.location.hostname === "localhost"
-              ? "http://localhost:5000"
-              : window.location.origin);
-
-          const response = await axios.get(
-            `${API_BASE}/api/dashboard`
-          );
-
           const payload =
-            response.data || {};
+            (await readDataFromGas()) || {};
 
           const sourceData =
             Array.isArray(
               payload.sourceData
             )
               ? payload.sourceData
-              : [];
+              : Array.isArray(
+                  payload.data
+                )
+                ? payload.data
+                : [];
 
           const prepared = {
             ...payload,
-
             sourceData,
-
             data: {
-              ...(payload.data ||
-                {}),
-
+              ...(payload.data &&
+              typeof payload.data === "object" &&
+              !Array.isArray(payload.data)
+                ? payload.data
+                : {}),
               filters:
-                payload.data
-                  ?.filters || {
-                  itemIds: [],
-                  customers: [],
-                  models: [],
-                  years: [],
-                  months: [],
-                },
+                payload.data &&
+                typeof payload.data === "object" &&
+                !Array.isArray(payload.data)
+                  ? payload.data.filters || {
+                      itemIds: [],
+                      customers: [],
+                      models: [],
+                      years: [],
+                      months: [],
+                    }
+                  : {
+                      itemIds: [],
+                      customers: [],
+                      models: [],
+                      years: [],
+                      months: [],
+                    },
             },
           };
 
@@ -1682,7 +1688,7 @@ function Dashboard() {
           console.error(err);
 
           setError(
-            "Gagal mengambil data dashboard. Pastikan backend sedang berjalan."
+            "Gagal mengambil data dashboard. Pastikan URL Google Apps Script (VITE_GAS_URL) sudah benar."
           );
         } finally {
           setLoading(false);

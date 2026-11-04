@@ -1,13 +1,8 @@
 import { useMemo, useState } from "react";
-import axios from "axios";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : window.location.origin);
+import { writeDataToGas } from "../lib/gasApi";
 
 function ImportData() {
   const [file, setFile] = useState(null);
@@ -122,23 +117,14 @@ function ImportData() {
     setMessage("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const response = await writeDataToGas("append", {
+        rows: importRows,
+      });
 
-      const response = await axios.post(
-        `${API_BASE}/api/import/commit`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      saveImportHistory(response.data);
+      saveImportHistory(response);
 
       setMessage(
-        `Import berhasil: ${response.data.totalRows || importRows.length} data tersimpan.`
+        `Import berhasil: ${response.totalRows || importRows.length} data tersimpan.`
       );
       setFile(null);
       setImportRows([]);
@@ -147,8 +133,8 @@ function ImportData() {
     } catch (err) {
       console.error(err);
       const errorMessage =
-        err?.response?.data?.message ||
-        "Import gagal. Cek format file dan koneksi backend.";
+        err?.message ||
+        "Import gagal. Cek format file dan URL Google Apps Script.";
 
       setError(errorMessage);
       saveImportHistory({ success: false, totalRows: importRows.length });

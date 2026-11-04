@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : window.location.origin);
+import { writeDataToGas } from "../lib/gasApi";
 
 function ImportHistory() {
   const [history, setHistory] = useState([]);
@@ -33,15 +28,13 @@ function ImportHistory() {
     try {
       setProcessing(true);
 
-      const response = await axios.delete(`${API_BASE}/api/import`, {
-        data: {
-          importId: item.importId || null,
-          rows: Array.isArray(item.rows) ? item.rows : [],
-        },
+      const response = await writeDataToGas("delete", {
+        importId: item.importId || null,
+        rows: Array.isArray(item.rows) ? item.rows : [],
       });
 
-      if (!response.data.success) {
-        throw new Error(response.data.message || "Gagal menghapus data");
+      if (!response.success) {
+        throw new Error(response.message || "Gagal menghapus data");
       }
 
       const updatedHistory = history.filter((_, itemIndex) => itemIndex !== index);
@@ -54,10 +47,7 @@ function ImportHistory() {
       window.location.href = "/";
     } catch (error) {
       console.error(error);
-      alert(
-        error?.response?.data?.message ||
-          "Gagal menghapus data import dari Google Sheets."
-      );
+      alert(error?.message || "Gagal menghapus data import dari Google Sheets.");
     } finally {
       setProcessing(false);
     }
