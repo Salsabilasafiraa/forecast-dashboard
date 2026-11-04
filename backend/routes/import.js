@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const Papa = require("papaparse");
 const XLSX = require("xlsx");
 const {
   appendRows,
@@ -28,6 +29,51 @@ const REQUIRED_COLUMNS = [
   "Bulan",
 ];
 
+const parseSpreadsheetRows = (file) => {
+  const fileName = String(file.originalname || "").toLowerCase();
+  const isCsvLike = [".csv", ".tsv", ".txt"].some((ext) => fileName.endsWith(ext));
+
+  if (isCsvLike) {
+    const text = file.buffer.toString("utf-8");
+    const result = Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => String(header).trim(),
+    });
+
+    if (result.errors?.length) {
+      console.warn("CSV parse warnings:", result.errors);
+    }
+
+    return {
+      data: Array.isArray(result.data) ? result.data : [],
+      sheetName: "DATABASE",
+    };
+  }
+
+  const workbook = XLSX.read(file.buffer, {
+    type: "buffer",
+  });
+
+  const sheetName = workbook.SheetNames.find(
+    (name) => name.toUpperCase() === "DATABASE"
+  );
+
+  if (!sheetName) {
+    throw new Error("Sheet DATABASE tidak ditemukan");
+  }
+
+  const worksheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(worksheet, {
+    defval: "",
+  });
+
+  return {
+    data,
+    sheetName,
+  };
+};
+
 // POST /api/import/preview
 router.post("/commit", upload.single("file"), async (req, res) => {
   try {
@@ -39,30 +85,7 @@ router.post("/commit", upload.single("file"), async (req, res) => {
       });
     }
 
-    // Baca workbook
-    const workbook = XLSX.read(req.file.buffer, {
-      type: "buffer",
-    });
-
-    // Cari sheet DATABASE
-    const sheetName = workbook.SheetNames.find(
-      (name) => name.toUpperCase() === "DATABASE"
-    );
-
-    if (!sheetName) {
-      return res.status(400).json({
-        success: false,
-        message: "Sheet DATABASE tidak ditemukan",
-      });
-    }
-
-    // Ambil worksheet
-    const worksheet = workbook.Sheets[sheetName];
-
-    // Ubah Excel menjadi array object
-    const data = XLSX.utils.sheet_to_json(worksheet, {
-      defval: "",
-    });
+    const { data, sheetName } = parseSpreadsheetRows(req.file);
 
     // Cek apakah ada data
     if (data.length === 0) {
@@ -92,7 +115,7 @@ router.post("/commit", upload.single("file"), async (req, res) => {
 
     res.json({
       success: true,
-      message: "Data Excel berhasil diimport ke Google Sheets 🎉",
+      message: "Data spreadsheet berhasil diimport ke Google Sheets 🎉",
       fileName: req.file.originalname,
       sheet: sheetName,
       totalRows: data.length,

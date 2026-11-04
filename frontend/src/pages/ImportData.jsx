@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import axios from "axios";
+import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 const API_BASE =
@@ -31,12 +32,11 @@ function ImportData() {
       return;
     }
 
-    if (
-      ![".xlsx", ".xls"].some((ext) =>
-        selectedFile.name.toLowerCase().endsWith(ext)
-      )
-    ) {
-      setError("Format file harus .xlsx atau .xls");
+    const allowedExtensions = [".csv", ".tsv", ".xls", ".xlsx", ".txt"];
+    const fileName = selectedFile.name.toLowerCase();
+
+    if (!allowedExtensions.some((ext) => fileName.endsWith(ext))) {
+      setError("Format file harus .csv, .tsv, .xlsx, .xls, atau .txt");
       setFile(null);
       setPreviewRows([]);
       return;
@@ -49,18 +49,31 @@ function ImportData() {
     setLoadingPreview(true);
 
     try {
-      const buffer = await selectedFile.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
+      let rows = [];
 
-      const sheetName =
-        workbook.SheetNames.find(
-          (name) => name.toUpperCase() === "DATABASE"
-        ) || workbook.SheetNames[0];
+      if ([".csv", ".tsv", ".txt"].some((ext) => fileName.endsWith(ext))) {
+        const text = await selectedFile.text();
+        const parsed = Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: (header) => String(header).trim(),
+        });
 
-      const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, {
-        defval: "",
-      });
+        rows = Array.isArray(parsed.data) ? parsed.data : [];
+      } else {
+        const buffer = await selectedFile.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+
+        const sheetName =
+          workbook.SheetNames.find(
+            (name) => name.toUpperCase() === "DATABASE"
+          ) || workbook.SheetNames[0];
+
+        const worksheet = workbook.Sheets[sheetName];
+        rows = XLSX.utils.sheet_to_json(worksheet, {
+          defval: "",
+        });
+      }
 
       setImportRows(rows);
 
@@ -68,11 +81,11 @@ function ImportData() {
       setPreviewRows(safeRows);
 
       if (safeRows.length === 0) {
-        setError("File Excel tidak memiliki data yang bisa diimport.");
+        setError("File spreadsheet tidak memiliki data yang bisa diimport.");
       }
     } catch (err) {
       console.error(err);
-      setError("Gagal membaca file Excel. Pastikan format benar.");
+      setError("Gagal membaca file spreadsheet. Pastikan format benar.");
       setPreviewRows([]);
     } finally {
       setLoadingPreview(false);
@@ -158,7 +171,7 @@ function ImportData() {
           <input
             id="excel-file-input"
             type="file"
-            accept=".xlsx,.xls"
+            accept=".csv,.tsv,.xlsx,.xls,.txt"
             onChange={handleFileChange}
           />
 
